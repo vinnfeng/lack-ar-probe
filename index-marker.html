@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+<title>LACK 边桌 · 标记锚定 AR（免安装版）</title>
+<style>
+html, body { margin:0; padding:0; overflow:hidden; font-family:"PingFang SC","Microsoft YaHei",sans-serif;}
+#hint {
+position:absolute; left:50%; bottom:18px; transform:translateX(-50%);
+width:92%; max-width:520px; box-sizing:border-box;
+background:rgba(0,0,0,0.62); color:#fff; border-radius:12px;
+padding:12px 16px; font-size:15px; line-height:1.55; z-index:10; text-align:center;
+}
+#hint.status { display:block; margin-top:6px; font-size:13px; color:#ffd76a;}
+#title {
+position:absolute; top:12px; left:50%; transform:translateX(-50%);
+background:rgba(0,0,0,0.45); color:#fff; border-radius:999px;
+padding:6px 14px; font-size:13px; z-index:10; white-space:nowrap;
+}
+</style>
+<!-- 全部库文件均为本地同目录引用，不依赖任何 CDN / 在线地址 -->
+<script src="three.min.js"></script>
+<script src="GLTFLoader.js"></script>
+<script src="ar.js"></script>
+</head>
+<body>
+<div id="title">LACK 边桌 · 标记锚定 AR（免安装版）</div>
+<div id="hint">
+把 Hiro 标记全屏显示在电脑屏幕上（打开同目录的 marker.html），或打印在 A4 纸上；<br>
+手机对准标记，保持约 30–60cm 距离，桌子会出现在标记上并自动组装。
+<span class="status" id="status">正在启动摄像头…</span>
+</div>
+
+<script>
+////////////////////////////////////////////////////////////////////////////////
+// 标记锚定 AR —— 与主站（model-viewer + ARCore 版）的区别：
+// 本版用 AR.js（ARToolKit 标记追踪，纯浏览器端计算机视觉），不依赖
+// 「面向 AR 的 Google Play 服务」(ARCore)，小米等缺该服务的手机也能跑。
+// 原理与原作者 Nigel 的方案相同：已知标记 = 空间锚点。
+////////////////////////////////////////////////////////////////////////////////
+
+var statusEl = document.getElementById('status');
+function setStatus(t){ if (statusEl.textContent!== t) statusEl.textContent = t;}
+
+////////////////////////////////////////////////////////////////////////////////
+// 渲染器 / 场景 / 相机
+////////////////////////////////////////////////////////////////////////////////
+var renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true});
+renderer.setClearColor(new THREE.Color('lightgrey'), 0);
+renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+renderer.outputEncoding = THREE.sRGBEncoding; // three r150 的色彩空间设置
+renderer.domElement.style.position = 'absolute';
+renderer.domElement.style.top = '0px';
+renderer.domElement.style.left = '0px';
+document.body.appendChild(renderer.domElement);
+
+var scene = new THREE.Scene();
+var camera = new THREE.Camera();
+scene.add(camera);
+
+var onRenderFcts = [];
+
+////////////////////////////////////////////////////////////////////////////////
+// ArToolkitSource：摄像头输入
+////////////////////////////////////////////////////////////////////////////////
+var arToolkitSource = new THREEx.ArToolkitSource({
+sourceType: 'webcam',
+sourceWidth: window.innerWidth > window.innerHeight? 640: 480,
+sourceHeight: window.innerWidth > window.innerHeight? 480: 640
+});
+arToolkitSource.init(function onReady(){
+setStatus('摄像头已启动，请对准 Hiro 标记');
+setTimeout(onResize, 800);
+});
+window.addEventListener('resize', onResize);
+function onResize(){
+arToolkitSource.onResizeElement();
+arToolkitSource.copyElementSizeTo(renderer.domElement);
+if (arToolkitContext.arController!== null){
+arToolkitSource.copyElementSizeTo(arToolkitContext.arController.canvas);
+}
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// ArToolkitContext：标记检测（图案与相机参数均为本地文件）
+////////////////////////////////////////////////////////////////////////////////
+var arToolkitContext = new THREEx.ArToolkitContext({
+cameraParametersUrl: 'camera_para.dat',
+detectionMode: 'mono'
+});
+arToolkitContext.init(function onCompleted(){
+camera.projectionMatrix.copy(arToolkitContext.getProjectionMatrix());
+});
+onRenderFcts.push(function(){
+if (arToolkitSource.ready === false) return;
+arToolkitContext.update(arToolkitSource.domElement);
+});
+
+////////////////////////////////////////////////////////////////////////////////
+// 标记锚点：markerRoot 由 ArMarkerControls 驱动（modelViewMatrix 模式，
+// 标记在 AR.js 中边长 = 1 个世界单位）；smoothedRoot 经官方
+// ArSmoothedControls 平滑（默认参数），减轻逐帧位姿抖动。
+////////////////////////////////////////////////////////////////////////////////
+var markerRoot = new THREE.Group();
+scene.add(markerRoot);
+new THREEx.ArMarkerControls(arToolkitContext, markerRoot, {
+type: 'pattern',
+patternUrl: 'patt.hiro' // Hiro 标记的图案文件，与 marker.html 显示的图片是同一个标记
+});
+
+var smoothedRoot = new THREE.Group();
+scene.add(smoothedRoot);
+var smoothedControls = new THREEx.ArSmoothedControls(smoothedRoot);
+onRenderFcts.push(function(){
+smoothedControls.update(markerRoot);
+setStatus(smoothedRoot.visible? '已识别标记 ✓ 桌子组装中': '未识别到标记，请对准标记并保持 30–60cm');
+});
+
+////////////////////////////////////////////////////////////////////////////////
+// 光照（glb 里是 PBR 材质，需要场景光）
+////////////////////////////////////////////////////////////////////////////////
+scene.add(new THREE.HemisphereLight(0xffffff, 0x555555, 0.95));
+var dirLight = new THREE.DirectionalLight(0xffffff, 0.75);
+dirLight.position.set(2, 4, 3);
+scene.add(dirLight);
+
+////////////////////////////////////////////////////////////////////////////////
+// 加载组装动画模型
+//
+// lack_assembly.glb 与本页同目录部署（上线时与主站同仓库、
+// 同目录），故用相对路径 'lack_assembly.glb'。
+//
+//
+// - AR.js 中标记边长 = 1 世界单位；设标记实物边长 = 16cm，则 1 单位 = 16cm。
+// - glb 内单位 = 米：组装好的桌子宽 0.55（即真实 55cm），要求它在 AR 中
+// 也是 55cm → 目标跨度 = 55 / 16 = 3.4375 世界单位。
+// - 模型缩放系数 = 3.4375 / 0.55 = 6.25。
+// - 校验高度：0.45 × 6.25 = 2.8125 单位 × 16cm = 45cm ✓ 与实物一致。
+// - 底面贴合：实测 glb 静止姿态包围盒 min.y = -0.012（个别零件略低于
+// 地面 1.2cm），故内层组先抬升 +0.012（模型单位），使最低点正好落在
+// 标记平面（y=0）上；外层组再统一乘 6.25。
+////////////////////////////////////////////////////////////////////////////////
+var MODEL_SCALE = 6.25; // = (55/16) / 0.55
+var MODEL_Y_LIFT = 0.012; // 补偿包围盒 min.y = -0.012
+
+var mixer = null;
+var clock = new THREE.Clock();
+
+new THREE.GLTFLoader().load('lack_assembly.glb', function(gltf){
+var inner = new THREE.Group();
+inner.position.y = MODEL_Y_LIFT;
+inner.add(gltf.scene);
+var outer = new THREE.Group();
+outer.scale.setScalar(MODEL_SCALE);
+outer.add(inner);
+smoothedRoot.add(outer);
+
+// Blender 导出的是 13 条独立片段（12 条零件各 11.5s + 桌面 0.04s），
+// 须在同一个 AnimationMixer 上全部同时播放，才是完整组装过程。
+mixer = new THREE.AnimationMixer(gltf.scene);
+gltf.animations.forEach(function(clip){
+var action = mixer.clipAction(clip);
+action.setLoop(THREE.LoopRepeat);
+action.play();
+});
+}, undefined, function(err){
+console.error(err);
+setStatus('模型 lack_assembly.glb 加载失败，请确认它与本页在同一目录');
+});
+onRenderFcts.push(function(){
+if (mixer) mixer.update(clock.getDelta());
+});
+
+////////////////////////////////////////////////////////////////////////////////
+// 渲染循环（沿用 AR.js 官方 three.js 例子的结构）
+////////////////////////////////////////////////////////////////////////////////
+onRenderFcts.push(function(){
+renderer.render(scene, camera);
+});
+var lastTimeMsec = null;
+requestAnimationFrame(function animate(nowMsec){
+requestAnimationFrame(animate);
+lastTimeMsec = lastTimeMsec || (nowMsec - 1000/60);
+var deltaMsec = Math.min(200, nowMsec - lastTimeMsec);
+lastTimeMsec = nowMsec;
+onRenderFcts.forEach(function(f){ f(deltaMsec/1000, nowMsec/1000);});
+});
+</script>
+</body>
+</html>
