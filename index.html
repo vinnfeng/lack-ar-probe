@@ -12,7 +12,8 @@
   header h1 { font-size:17px; margin:0 0 4px; font-weight:600; }
   header p { font-size:12.5px; margin:0; color:#a7adb8; line-height:1.5; }
   model-viewer { flex:1; width:100%; background:#1b1e24; }
-  #steps { display:flex; flex-wrap:wrap; gap:8px; padding:10px 12px; }
+  #steps { display:flex; flex-wrap:wrap; gap:8px; padding:10px 12px;
+    position:absolute; left:0; right:0; bottom:0; z-index:5; }
   #steps button { flex:1 1 30%; padding:10px 4px; font-size:13.5px; border-radius:10px;
     border:1px solid #3a3f47; background:#23262d; color:#f2f3f5; }
   #steps button.active { background:#2f6fed; border-color:#2f6fed; }
@@ -1130,16 +1131,15 @@ var Dx=function(t,e,i,n){for(var r,s=arguments.length,a=s<3?e:null===n?n=Object.
     camera-controls autoplay shadow-intensity="1.1" exposure="1.05"
     camera-orbit="38deg 62deg 1.35m" min-camera-orbit="auto auto 0.6m" max-camera-orbit="auto auto 2.6m">
     <button id="arbtn" slot="ar-button">📐 在房间里看（AR）</button>
+    <div id="steps">
+      <button data-start="0" data-end="13.5">▶ 全部播放</button>
+      <button data-start="0" data-end="1.5">零件一览</button>
+      <button data-start="1.54" data-end="5.5">1 · 连接盘上腿</button>
+      <button data-start="5.54" data-end="7.5">2 · 螺钉进桌面</button>
+      <button data-start="7.54" data-end="11.5">3 · 桌腿旋上</button>
+      <button data-start="11.54" data-end="13.5">翻正完成</button>
+    </div>
   </model-viewer>
-
-  <div id="steps">
-    <button data-start="0" data-end="13.5">▶ 全部播放</button>
-    <button data-start="0" data-end="1.5">零件一览</button>
-    <button data-start="1.54" data-end="5.5">1 · 连接盘上腿</button>
-    <button data-start="5.54" data-end="7.5">2 · 螺钉进桌面</button>
-    <button data-start="7.54" data-end="11.5">3 · 桌腿旋上</button>
-    <button data-start="11.54" data-end="13.5">翻正完成</button>
-  </div>
   <div id="hint">AR 用法：在 Chrome 里打开本页 → 点「在房间里看」→ 对着地面慢慢晃一下手机认出地面 → 点一下放下桌子，绕着走能从各个角度看它组装。放不准可以拖动/双指缩放（AR 里是真实比例，建议别缩放）。</div>
 </div>
 
