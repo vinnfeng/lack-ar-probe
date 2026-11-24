@@ -1126,7 +1126,7 @@ var Dx=function(t,e,i,n){for(var r,s=arguments.length,a=s<3?e:null===n?n=Object.
 <div id="app">
   <header>
     <h1>宜家 LACK 边桌 · AR 组装探针</h1>
-    <p>两个模型可切换：LACK 边桌（55×55×45cm）看分步组装；办公桌（2.4×1.4m，照片建模）看摆看效果。点蓝色按钮把当前模型放进你的房间。</p>
+    <p>两个模型可切换：LACK 边桌（55×55×45cm）看分步组装；办公桌（4.8×1.4m 两联，照片建模）看摆看效果。点蓝色按钮把当前模型放进你的房间。</p>
   </header>
 
   <div id="models">
@@ -1187,10 +1187,10 @@ var Dx=function(t,e,i,n){for(var r,s=arguments.length,a=s<3?e:null===n?n=Object.
       hintEl.textContent = HINT_LACK;
     } else {
       mv.src = 'desk_table.glb';
-      mv.setAttribute('camera-orbit', '38deg 60deg 3.6m');
-      mv.setAttribute('max-camera-orbit', 'auto auto 8m');
+      mv.setAttribute('camera-orbit', '38deg 60deg 5.6m');
+      mv.setAttribute('max-camera-orbit', 'auto auto 12m');
       stepsEl.style.display = 'none';
-      hintEl.textContent = '办公桌是完成态摆看：点「在房间里看」把它放进房间，拖动可挪位置；尺寸 2.4×1.4m 为照片估读，真实比例已按此标定，建议别缩放。';
+      hintEl.textContent = '办公桌是完成态摆看：点「在房间里看」把它放进房间，拖动可挪位置；尺寸 4.8×1.4m（两联）为照片估读，真实比例已按此标定，建议别缩放。';
     }
   }
   mLack.addEventListener('click', () => setModel('lack'));
