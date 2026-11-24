@@ -14,6 +14,10 @@
   model-viewer { flex:1; width:100%; background:#1b1e24; }
   #steps { display:flex; flex-wrap:wrap; gap:8px; padding:10px 12px;
     position:absolute; left:0; right:0; bottom:0; z-index:5; }
+  #models { display:flex; gap:8px; padding:10px 12px 2px; }
+  #models button { flex:1; padding:9px 4px; font-size:14px; border-radius:10px;
+    border:1px solid #3a4152; background:#232833; color:#e8eaf0; }
+  #models button.active { background:#2f6fed; border-color:#2f6fed; }
   #steps button { flex:1 1 30%; padding:10px 4px; font-size:13.5px; border-radius:10px;
     border:1px solid #3a3f47; background:#23262d; color:#f2f3f5; }
   #steps button.active { background:#2f6fed; border-color:#2f6fed; }
@@ -1122,8 +1126,13 @@ var Dx=function(t,e,i,n){for(var r,s=arguments.length,a=s<3?e:null===n?n=Object.
 <div id="app">
   <header>
     <h1>宜家 LACK 边桌 · AR 组装探针</h1>
-    <p>真实尺寸 55×55×45cm。下面按步骤看组装，或点蓝色按钮把桌子放进你的房间，它会自己装起来。</p>
+    <p>两个模型可切换：LACK 边桌（55×55×45cm）看分步组装；办公桌（2.4×1.4m，照片建模）看摆看效果。点蓝色按钮把当前模型放进你的房间。</p>
   </header>
+
+  <div id="models">
+    <button id="m-lack" class="active">LACK 边桌 · 组装</button>
+    <button id="m-desk">办公桌 · 摆看</button>
+  </div>
 
   <model-viewer id="mv"
     src="lack_assembly.glb"
@@ -1160,6 +1169,32 @@ var Dx=function(t,e,i,n){for(var r,s=arguments.length,a=s<3?e:null===n?n=Object.
     }, 60);
   }));
   mv.addEventListener('load', () => { mv.pause(); mv.currentTime = 0; });
+
+  const stepsEl = document.getElementById('steps');
+  const hintEl = document.getElementById('hint');
+  const mLack = document.getElementById('m-lack'), mDesk = document.getElementById('m-desk');
+  const HINT_LACK = hintEl.textContent;
+  function setModel(which){
+    mLack.classList.toggle('active', which === 'lack');
+    mDesk.classList.toggle('active', which === 'desk');
+    stopTimer();
+    btns.forEach(x => x.classList.remove('active'));
+    if (which === 'lack'){
+      mv.src = 'lack_assembly.glb';
+      mv.setAttribute('camera-orbit', '38deg 62deg 1.35m');
+      mv.setAttribute('max-camera-orbit', 'auto auto 2.6m');
+      stepsEl.style.display = '';
+      hintEl.textContent = HINT_LACK;
+    } else {
+      mv.src = 'desk_table.glb';
+      mv.setAttribute('camera-orbit', '38deg 60deg 3.6m');
+      mv.setAttribute('max-camera-orbit', 'auto auto 8m');
+      stepsEl.style.display = 'none';
+      hintEl.textContent = '办公桌是完成态摆看：点「在房间里看」把它放进房间，拖动可挪位置；尺寸 2.4×1.4m 为照片估读，真实比例已按此标定，建议别缩放。';
+    }
+  }
+  mLack.addEventListener('click', () => setModel('lack'));
+  mDesk.addEventListener('click', () => setModel('desk'));
 </script>
 </body>
 </html>
